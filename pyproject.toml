@@ -1,0 +1,21 @@
+[build-system]
+requires = [
+    "setuptools>=64",
+    "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vllm-hust-ascend-bidkv"
+version = "0.1.0"
+description = "BidKV: Utility-based victim selection plugin for vLLM Ascend scheduler"
+requires-python = ">=3.10"
+dependencies = []
+license = {text = "Apache-2.0"}
+readme = "README.md"
+
+[project.entry-points."vllm_ascend.victim_selector"]
+bidkv = "vllm_ascend_bidkv:BidkvVictimSelector"
+
+[tool.setuptools.packages.find]
+include = ["vllm_ascend_bidkv*"]
