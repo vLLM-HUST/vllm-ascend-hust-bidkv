@@ -2,7 +2,7 @@
 
 **BidKV: Utility-Guided Preemption Scheduling for KV-Pressure LLM Serving**
 
-> 📄 **Paper**: accepted at **SC26** (Supercomputing 2026)
+> 📄 **Paper**: **SC26** (Supercomputing 2026)
 >
 > BidKV is a utility-guided KV-cache reclamation policy that replaces implicit
 > order-based victim selection with an explicit bid-based scheduling interface.
