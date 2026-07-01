@@ -25,6 +25,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+import logging
+
 from vllm.v1.core.sched.request_queue import SchedulingPolicy
 from vllm.v1.request import Request
 
@@ -276,6 +278,15 @@ class BidkvVictimSelector:
         self._decision_snapshots: deque[dict[str, Any]] = deque(
             maxlen=snapshot_size
         )
+        logging.getLogger("vllm").info(
+            "[BidKV] INIT | enabled=%s | kv_gate=%.2f | min_running=%d | "
+            "completion_w=%.2f | preempt_w=%.2f",
+            self.config.enable_utility_victim_selection,
+            self.config.utility_kv_gate,
+            self.config.utility_min_running,
+            self.config.utility_completion_weight,
+            self.config.utility_preempt_weight,
+        )
 
     # -- Factory ----------------------------------------------------------
 
@@ -332,10 +343,34 @@ class BidkvVictimSelector:
 
         if utility_enabled:
             ranked_candidates, req_map = self._rank_candidates(running)
-            victim = req_map[ranked_candidates[0].request_id]
+            top = ranked_candidates[0]
+            victim = req_map[top.request_id]
             self._last_utility_pick_ts = now
+            logging.getLogger("vllm").info(
+                "[BidKV] UTILITY_ACTIVE | victim=%s | U=%.4f | "
+                "r=%d tok | completion=%.2f | preemptions=%d | "
+                "kv_util=%.2f | running=%d",
+                top.request_id, top.utility, top.tokens_freed,
+                top.completion, top.num_preemptions,
+                kv_utilization or 0.0, len(running),
+            )
         else:
             victim = default_victim
+            reason_parts = []
+            if not self._utility_enabled:
+                reason_parts.append("main_switch_off")
+            else:
+                if len(running) < self.config.utility_min_running:
+                    reason_parts.append(f"running({len(running)})<min({self.config.utility_min_running})")
+                if (self.config.utility_kv_gate > 0 and
+                        (kv_utilization or 0) < self.config.utility_kv_gate):
+                    reason_parts.append(f"kv({kv_utilization:.2f})<gate({self.config.utility_kv_gate})")
+            logging.getLogger("vllm").info(
+                "[BidKV] FALLBACK | victim=%s (default) | reason=%s | "
+                "kv_util=%.2f | running=%d",
+                victim.request_id, ",".join(reason_parts) or "unknown",
+                kv_utilization or 0.0, len(running),
+            )
             if self.config.utility_snapshot_enabled:
                 ranked_candidates, _ = self._rank_candidates(running)
 
