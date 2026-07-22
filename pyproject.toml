@@ -14,7 +14,7 @@ dependencies = []
 license = {text = "Apache-2.0"}
 readme = "README.md"
 
-[project.entry-points."vllm_ascend.victim_selector"]
+[project.entry-points."vllm.victim_selector"]
 bidkv = "vllm_ascend_bidkv:BidkvVictimSelector"
 
 [tool.setuptools.packages.find]
